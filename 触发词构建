@@ -1,0 +1,151 @@
+ #-*-coding:utf-8-*-*#python3.5版本
+import openpyxl
+import types
+data=openpyxl.load_workbook('sina.xlsx')
+sheet=data.get_sheet_by_name("dic_word")
+rows=len(sheet.rows)#词汇的个数
+dic=data.create_sheet('dic')
+r=1
+for i in range (1,rows+1):
+    cell=sheet.cell(row=i,column=1).value
+
+    length=len(cell)
+   
+    for j in range(length):
+        c=cell[j]
+        if type(c)==type('a'):
+            if r==1:
+                dic.cell(row=r,column=1).value=c
+                r+=1
+            else:
+                for m in range(1,r):
+                    cell_p=dic.cell(row=m,column=1).value
+                    if c==cell_p:
+                        break
+                    else:
+                        if m==r-1:
+                            dic.cell(row=r,column=1).value=c
+                            r+=1
+data.save("key_word1.xlsx")
+data=openpyxl.load_workbook('key_word1.xlsx')
+sheet=data.get_sheet_by_name("dic")
+non_dic=data.get_sheet_by_name("non_dic")
+non_num=len(non_dic.rows)
+seed=data.get_sheet_by_name("dic_word")
+rows=len(sheet.rows)#单个词汇的个数
+seedrow=len(seed.rows)#可用词汇的个数
+for i in range(1,rows+1):
+    num=1
+    cell=sheet.cell(row=i,column=1).value
+    for j in range(1,seedrow+1):
+        seedcell=seed.cell(row=j,column=1).value
+        if cell in seedcell:
+            num+=1
+            sheet.cell(row=i,column=num).value=seedcell
+        
+data.save('dic2.xlsx')
+
+
+data=openpyxl.load_workbook('dic2.xlsx')
+sheet=data.get_sheet_by_name('dic')
+row=len(sheet.rows)#行数
+dic=data.create_sheet('new_dic')
+dic_word=data.get_sheet_by_name('dic_word')
+dic_word_num=len(dic_word.rows)
+f = open("sina.txt", "r")
+m=1
+produce=data.create_sheet('produce')
+while True:
+    
+    #m=m+2
+    a=[]
+    m+=1
+    print(m)
+    hang=2
+    line= f.readline()
+    location_word=0
+ 
+    loc=2
+    if line:#对于每一行文本做操作
+        for i in range(1,row+1):
+            cell=sheet.cell(row=i,column=1).value
+            location=line.find(cell)
+            while (location>0):
+                #dic.cell(row=m,column=loc).value=line[location:location+1]
+                #dic.cell(row=m+1,column=loc).value=location
+                dic.cell(row=m,column=loc).value=location
+                a.append(location)
+                loc+=1
+              
+                location=line.find(cell,location+1)
+                
+        a.sort()
+        
+        le=len(a)
+        chf=1
+        con=0
+        for li in range(0,le-1):
+           
+            if a[li+1]-a[li]<=1:#相邻两个hitword的位置小于等于1
+                con+=1
+                if li==le-2:
+                    may_dic=line[a[li+1-con]:a[li+1]+1]
+                    for num in range(1,non_num+1):
+                        cell_dic=non_dic.cell(row=num,column=1).value
+                        if cell_dic in may_dic:
+                            length=len(cell_dic)
+                            b=may_dic.find(cell_dic)
+                            c=b+length
+                            may_dic=may_dic[:b]+may_dic[c:]
+                    dic_len=len(may_dic)
+                    if len(may_dic)>2:
+                        
+                        print(may_dic)
+                        location_word=line.find(may_dic,location_word+1)
+                        print(location_word)
+                        produce.cell(row=m,column=hang).value=may_dic
+                        hang+=1
+
+
+                    if len(may_dic)==2:
+                        for dic_num in range(1,dic_word_num+1):
+                            if may_dic==dic_word.cell(row=dic_num,column=1).value:
+                                print (may_dic)
+                                location_word=line.find(may_dic,location_word+1)
+                                print(location_word)
+                                produce.cell(row=m,column=hang).value=may_dic
+                                hang+=1
+
+                    con=0
+            else:#相邻两个hitword的位置距离大于1
+                if con>0:
+                    may_dic=line[a[li-con]:a[li]+1]
+                    for num in range(1,non_num+1):
+                        cell_dic=non_dic.cell(row=num,column=1).value
+                        if cell_dic in may_dic:
+                            length=len(cell_dic)#cell_dic的长度
+                            b=may_dic.find(cell_dic)
+                            c=b+length
+                            may_dic=may_dic[:b]+may_dic[c:]
+                    dic_len=len(may_dic)
+                    if len(may_dic)>2:
+                        print(may_dic)
+                        location_word=line.find(may_dic,location_word+1)
+                        print(location_word)
+                        produce.cell(row=m,column=hang).value=may_dic
+                        hang+=1
+                    if len(may_dic)==2:
+                        for dic_num in range(1,dic_word_num+1):
+                            if may_dic==dic_word.cell(row=dic_num,column=1).value:
+                                print (may_dic)
+                                location_word=line.find(may_dic,location_word+1)
+                                print(location_word)
+                                produce.cell(row=m,column=hang).value=may_dic
+                                hang+=1
+                    con=0
+            
+    else:
+        break
+data.save('sina_dic.xlsx')
+
+
