@@ -1,0 +1,151 @@
+#-*- coding:utf-8 �C*-
+'''
+Created on 2015-12-1
+
+@author: zkpk
+'''
+
+import xlrd
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestRegressor
+import jieba
+import heapq
+import re
+import string
+from sklearn import tree
+from sklearn.externals.six import StringIO
+from sklearn import feature_extraction
+from sklearn.feature_extraction.text import TfidfTransformer
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn import metrics
+from sklearn.ensemble import ExtraTreesClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.naive_bayes import GaussianNB
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.svm import SVC
+import sklearn.svm as svm
+from sklearn.datasets import make_multilabel_classification
+from sklearn.multiclass import OneVsRestClassifier
+from sklearn.preprocessing import LabelBinarizer
+from sklearn.decomposition import PCA
+from sklearn.cross_decomposition import CCA
+import numpy as np
+import random
+import warnings
+#import all_pre as p_r_f
+import hxjz as p_r_f
+import xlwt
+filename=xlwt.Workbook()
+warnings.filterwarnings("ignore")
+workbook = xlrd.open_workbook('input/data.xlsx')
+sheet=workbook.sheets()[2]
+corpus=[]#分词结果
+train_idx=1400
+max_idx=1581
+i =1400
+j=[1400]
+feature_count=[1200]
+total_key=100
+for total_key in feature_count:
+    print 'count of feature word=',total_key,'!!!!!!!!!!!!!!!!!!!'
+    for i in j:
+        print 'trian number=',i
+        for i in range(1,(max_idx+1)):
+            seg_list = jieba.cut(sheet.cell(i,4).value)  # 默认是精确模式
+            corpus.append(" ".join(seg_list))
+        target=[]
+        for i in range(1,(max_idx+1)):
+            if isinstance(sheet.cell(i,1).value, float):
+                target.append(sheet.cell(i,1).value)
+            else:
+                target.append(0.0)
+        reflectloc=random.sample(range(max_idx),max_idx)
+            
+        vectorizer=CountVectorizer()#该类会将文本中的词语转换为词频矩阵，矩阵元素a[i][j] 表示j词在i类文本下的词频
+        transformer=TfidfTransformer()#该类会统计每个词语的tf-idf权值
+        tfidf=transformer.fit_transform(vectorizer.fit_transform(corpus))#第一个fit_transform是计算tf-idf，第二个fit_transform是将文本转为词频矩阵
+        word=vectorizer.get_feature_names()#获取词袋模型中的所有词语
+        weight=tfidf.toarray()#将tf-idf矩阵抽取出来，元素a[i][j]表示j词在i类文本中的tf-idf权重
+
+
+        judge_feature=[]
+        for i in range(len(weight[1,:])):
+            total=0
+            for j in range(train_idx):
+                if weight[reflectloc[j],i]>0:
+                    total+=weight[reflectloc[j],i]
+            judge_feature.append(total)
+        final_feature_index=[]
+        p=sorted(judge_feature)
+        p.reverse()
+    #选择特征词
+        for i in range(len(judge_feature)):
+            if judge_feature[i]>p[total_key]:
+                final_feature_index.append(i)
+    #注释内时输出tfidf最大的特征词
+    #for i in range(total_key):
+     #   print word[final_feature_index[i]],judge_feature[final_feature_index[i]]'''
+
+            final_weight=[]
+            final_target=target
+        for i in range(max_idx):
+            every_weight=[]
+            for j in range(len(weight[i,:])):
+            #if final_feature_index.count(j)>0:
+                every_weight.append(weight[i,j])
+            final_weight.append(every_weight)
+        final_weight_random=[]
+        final_target_random=[]
+        for i in range(train_idx):
+            final_weight_random.append(final_weight[reflectloc[i]])
+            final_target_random.append(final_target[reflectloc[i]])
+
+
+        #b=max_idx-train_idx
+        test=[]
+      
+        for i in range(train_idx,max_idx):
+            test.append(final_target[reflectloc[i]])
+        b=len(test)
+        
+    #decision tree
+    #print ('decision tree')
+    
+        sheet_linear=filename.add_sheet("linear_tree")
+        model = tree.DecisionTreeClassifier()
+        model = model.fit(final_weight_random, final_target_random)  
+        tree_pre=[]
+        for i in range(train_idx,max_idx):
+            tree_pre.append(model.predict(final_weight[reflectloc[i]])[0])
+        svc_i=0
+        print test
+        print tree_pre
+        excel,hxjz,all_pre=p_r_f.p_r_f(test,tree_pre,b)
+        #sheet_linear.write(svc_i,0,"count of feature word="+str(total_key))
+        sheet_linear.write(svc_i,1,"policy")
+        sheet_linear.write(svc_i,2,"invent")
+        sheet_linear.write(svc_i,3,"trade")
+        sheet_linear.write(svc_i,4,"finance")
+        sheet_linear.write(svc_i,5,"copy")
+        sheet_linear.write(svc_i,6,"country")
+        sheet_linear.write(svc_i,7,"others")
+        sheet_linear.write((svc_i+1),0,"precision")
+        sheet_linear.write((svc_i+2),0,"recall")
+        sheet_linear.write((svc_i+3),0,"f1")
+        sheet_linear.write((svc_i+4),0,"all_precision")
+        sheet_linear.write((svc_i+5),0,"confusion matrix")
+        for i in range(1,8):
+            sheet_linear.write((svc_i+1),i,excel[i-1])
+            sheet_linear.write((svc_i+2),i,excel[i+6])
+            sheet_linear.write((svc_i+3),i,excel[i+13])
+        sheet_linear.write((svc_i+4),1,all_pre)
+        for j in range(5,12):
+            for i in range(1,8):
+                sheet_linear.write((svc_i+j),i,hxjz[(i-1)+7*(j-5)])
+        svc_i=svc_i+12
+        filename.save("output/test1.xlsx")
+        print "Done_tree"
+        
+    
+    
+  
